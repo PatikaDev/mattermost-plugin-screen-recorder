@@ -16,6 +16,7 @@ const config = {
             useBuiltIns: 'usage',
             shippedProposals: true,
         }],
+
         // Classic runtime on purpose: JSX compiles to React.createElement on the host
         // webapp's React (17 on 10.11, 18 on 11.x, 19 on 12.x). The automatic runtime
         // would need window.ReactJSXRuntime, which only the v12 webapp provides.
