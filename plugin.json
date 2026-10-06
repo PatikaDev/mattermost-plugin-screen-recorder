@@ -1,0 +1,17 @@
+{
+    "id": "dev.patika.screen-recorder",
+    "name": "Screen Recorder",
+    "description": "Record your screen (with optional microphone narration) and post it as a video, right from the message box.",
+    "homepage_url": "https://github.com/PatikaDev/mattermost-plugin-screen-recorder",
+    "support_url": "https://github.com/PatikaDev/mattermost-plugin-screen-recorder/issues",
+    "icon_path": "assets/screen-recorder-icon.svg",
+    "min_server_version": "10.11.0",
+    "webapp": {
+        "bundle_path": "webapp/dist/main.js"
+    },
+    "settings_schema": {
+        "header": "",
+        "footer": "",
+        "settings": []
+    }
+}
