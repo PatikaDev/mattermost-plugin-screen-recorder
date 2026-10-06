@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "core-js": "3.26.0",
+    "fix-webm-duration": "1.0.6",
     "mattermost-redux": "11.1.0",
     "react": "18.2.0",
     "react-redux": "9.2.0",

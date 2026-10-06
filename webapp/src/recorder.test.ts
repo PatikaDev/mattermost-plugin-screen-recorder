@@ -4,9 +4,13 @@
 // Copyright (c) 2026-present Patika. All Rights Reserved.
 // See LICENSE for license information.
 
+import fixWebmDuration from 'fix-webm-duration';
+
 import {Recording} from './recorder';
 
 import {FakeMediaRecorder, installFakeMedia, micStream, screenStream} from '../tests/fake_media';
+
+jest.mock('fix-webm-duration', () => jest.fn(async (blob: Blob) => new Blob([blob, 'duration'], {type: blob.type})));
 
 describe('Recording', () => {
     beforeEach(installFakeMedia);
@@ -77,5 +81,22 @@ describe('Recording', () => {
         expect(recording.recordedBytes).toBe(500);
         expect(FakeMediaRecorder.instances[0].state).toBe('inactive');
         expect(screen.tracks[0].stopped).toBe(true);
+    });
+
+    it('writes the duration into WebM recordings (Firefox), but leaves MP4 alone', async () => {
+        FakeMediaRecorder.supported = (type: string) => type.startsWith('video/webm');
+        const webm = new Recording(screenStream(), null, 0, jest.fn());
+        webm.start();
+        FakeMediaRecorder.instances[0].emit(10);
+        const webmResult = await webm.stop();
+        expect(webmResult.mimeType).toBe('video/webm;codecs=vp9');
+        expect(fixWebmDuration).toHaveBeenCalledTimes(1);
+        expect(webmResult.blob.size).toBe(10 + 'duration'.length);
+
+        FakeMediaRecorder.supported = (type: string) => type.startsWith('video/mp4');
+        const mp4 = new Recording(screenStream(), null, 0, jest.fn());
+        mp4.start();
+        await mp4.stop();
+        expect(fixWebmDuration).toHaveBeenCalledTimes(1);
     });
 });

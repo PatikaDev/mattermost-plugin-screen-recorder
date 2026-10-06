@@ -4,3 +4,6 @@ Copyright 2026 Patika (PatikaDev)
 This project is based on the Mattermost Plugin Starter Template
 (https://github.com/mattermost/mattermost-plugin-starter-template),
 Copyright (c) 2015-present Mattermost, Inc., licensed under the Apache License, Version 2.0.
+
+This product bundles fix-webm-duration (https://github.com/yusitnikov/fix-webm-duration),
+Copyright (c) 2018 Yury Sitnikov, licensed under the MIT License.

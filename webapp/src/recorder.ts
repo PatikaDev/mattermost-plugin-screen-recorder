@@ -1,6 +1,8 @@
 // Copyright (c) 2026-present Patika. All Rights Reserved.
 // See LICENSE for license information.
 
+import fixWebmDuration from 'fix-webm-duration';
+
 import {stopStream} from './capture';
 import {pickMimeType} from './media_format';
 
@@ -24,6 +26,7 @@ export class Recording {
     private readonly mimeType: string;
     private readonly stopped: Promise<void>;
     private bytes = 0;
+    private startedAt = 0;
     private autoStopped = false;
     private discarded = false;
 
@@ -65,6 +68,7 @@ export class Recording {
 
     start() {
         // Emit a chunk every second so the size limit is enforced while recording.
+        this.startedAt = Date.now();
         this.recorder.start(1000);
     }
 
@@ -84,7 +88,19 @@ export class Recording {
         }
         await this.stopped;
         this.releaseDevices();
-        return {blob: new Blob(this.chunks, {type: this.mimeType}), mimeType: this.mimeType};
+        const durationMs = Date.now() - this.startedAt;
+        let blob = new Blob(this.chunks, {type: this.mimeType});
+
+        // MediaRecorder writes WebM without a duration, so players show no length and
+        // seeking misbehaves. MP4 carries it already. Patch it in, or keep the original.
+        if (this.mimeType.startsWith('video/webm')) {
+            try {
+                blob = await fixWebmDuration(blob, durationMs, {logger: false});
+            } catch {
+                // An unpatched video still plays; only the length display is missing.
+            }
+        }
+        return {blob, mimeType: this.mimeType};
     }
 
     cancel() {

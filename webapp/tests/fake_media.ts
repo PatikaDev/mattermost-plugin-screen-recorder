@@ -76,6 +76,7 @@ export class FakeMediaRecorder {
 
 export function installFakeMedia() {
     FakeMediaRecorder.instances = [];
+    FakeMediaRecorder.supported = (type: string) => type.startsWith('video/mp4');
     (global as any).MediaRecorder = FakeMediaRecorder;
     (global as any).MediaStream = FakeStream;
 }
