@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — 2026-10-07
+
+### Fixed
+- "Screen recording" now lines up with "Your computer" in the attachment menu: it uses the
+  same icon font (Font Awesome) and icon width as Mattermost's own entry, in light and dark themes.
+
 ## [1.0.0] — 2026-10-07
 
 ### Added
