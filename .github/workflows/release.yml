@@ -23,6 +23,21 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Release notes from CHANGELOG.md
+        # Fails early if the CHANGELOG has no section for this version.
+        run: |
+          .github/release-notes.sh "$GITHUB_REF_NAME" > notes.md
+          {
+            echo
+            echo '### Install'
+            echo "Download \`dev.patika.screen-recorder-${GITHUB_REF_NAME#v}.tar.gz\` below, then in Mattermost open **System Console → Plugins → Plugin Management → Upload Plugin** and enable it. \`SHA256SUMS\` is attached for verification."
+            prev=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+            if [ -n "$prev" ]; then
+              echo
+              echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${prev}...${GITHUB_REF_NAME}"
+            fi
+          } >> notes.md
+          cat notes.md
       - name: Test and build
         run: |
           make apply
@@ -33,4 +48,4 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/SHA256SUMS --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+        run: gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/SHA256SUMS --verify-tag --notes-file notes.md --title "$GITHUB_REF_NAME"
