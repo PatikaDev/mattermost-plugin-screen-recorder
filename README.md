@@ -1,223 +1,122 @@
-# Plugin Starter Template
+# Screen Recorder for Mattermost
 
-[![Build Status](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/ci.yml/badge.svg)](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/ci.yml)
-[![E2E Status](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/e2e.yml/badge.svg)](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/e2e.yml)
+Record your screen — with optional microphone narration — and post it as a video,
+straight from the message box. Slack-style clips for Mattermost, in the web app and the
+desktop app.
 
-This plugin serves as a starting point for writing a Mattermost plugin. Feel free to base your own plugin off this repository.
+![Choosing what to record in the desktop app](docs/images/setup-desktop.png)
 
-To learn more about plugins, see [our plugin documentation](https://developers.mattermost.com/extend/plugins/).
+## Features
 
-This template requires node v16 and npm v8. You can download and install nvm to manage your node versions by following the instructions [here](https://github.com/nvm-sh/nvm). Once you've setup the project simply run `nvm i` within the root folder to use the suggested version of node.
+- **📎 → Screen recording** in any message box — a channel or a thread reply. The video is
+  added to that box like any other attachment, so you can type a comment before sending.
+- **Pick what to record:** a whole screen or a single app window (desktop app shows
+  thumbnails; browsers use their own picker, which also offers a single tab).
+- **Microphone narration** on or off, with mute/unmute while recording.
+- **MP4 by default** so videos play everywhere, including the iOS and Android apps; WebM
+  where a browser can't record MP4 (Firefox), with the video length written in so players
+  can show and seek it.
+- **Respects your server's upload limit:** recording stops on its own before the file would
+  be too large, and tells you why.
+- **Web-app only plugin** — no server-side code runs on your Mattermost server.
 
-## Getting Started
-Use GitHub's template feature to make a copy of this repository by clicking the "Use this template" button.
+| Recording bar | In the attachment menu | Posted |
+|---|---|---|
+| ![Recording bar](docs/images/recording-bar.png) | ![Attachment menu](docs/images/attach-menu.png) | ![Posted video](docs/images/posted-video.png) |
 
-Alternatively shallow clone the repository matching your plugin name:
-```
-git clone --depth 1 https://github.com/mattermost/mattermost-plugin-starter-template com.example.my-plugin
-```
+## Where it works
 
-Note that this project uses [Go modules](https://github.com/golang/go/wiki/Modules). Be sure to locate the project outside of `$GOPATH`.
+| Client | Record | Play |
+|---|---|---|
+| Web app — Chrome, Edge, Firefox, Safari | ✅ browser's own screen/window/tab picker | ✅ |
+| Desktop app — macOS, Windows, Linux | ✅ built-in picker with screen and window thumbnails | ✅ |
+| Mobile apps — iOS, Android | — (phones don't allow screen capture from apps) | ✅ |
 
-Edit the following files:
-1. `plugin.json` with your `id`, `name`, and `description`:
-```json
-{
-    "id": "com.example.my-plugin",
-    "name": "My Plugin",
-    "description": "A plugin to enhance Mattermost."
-}
-```
+Tested on Mattermost **11.7** (React 18) and **12.0** (React 19) with the same build.
+Requires Mattermost **10.11** or later.
 
-2. `go.mod` with your Go module path, following the `<hosting-site>/<repository>/<module>` convention:
-```
-module github.com/example/my-plugin
-```
+## Install
 
-3. Replace all occurrences of `github.com/mattermost/mattermost-plugin-starter-template` in the codebase with your Go module path:
+1. Download `dev.patika.screen-recorder-<version>.tar.gz` from the
+   [latest release](https://github.com/PatikaDev/mattermost-plugin-screen-recorder/releases/latest)
+   (`SHA256SUMS` is attached for verification).
+2. **System Console → Plugins → Plugin Management → Upload Plugin**, choose the file, then
+   **Enable**. Plugin uploads must be allowed (`PluginSettings.EnableUploads`).
+
+Or with `mmctl`:
+
 ```bash
-sed -i '' 's|github.com/mattermost/mattermost-plugin-starter-template|github.com/example/my-plugin|g' server/*.go
+mmctl plugin add dev.patika.screen-recorder-<version>.tar.gz
+mmctl plugin enable dev.patika.screen-recorder
 ```
 
-4. Replace `.golangci.yml` `local-prefixes` attribute with your Go module path:
-```yml
-linters-settings:
-  # [...]
-  goimports:
-    local-prefixes: github.com/example/my-plugin
-```
+Users may need to reload the app (Ctrl/Cmd + R) to see the new menu entry.
 
-5. Build your plugin:
-```
-make
-```
+## Using it
 
-This will produce a single plugin file (with support for multiple architectures) for upload to your Mattermost server:
+1. Click **📎** in a message box → **Screen recording**.
+2. Choose a screen or window (desktop app) and tick **Include microphone narration** if you
+   want to talk over it → **Start recording**. In a browser, pick the screen, window or tab
+   in the browser's dialog.
+3. A bar shows the timer with **Mute mic**, **Cancel** and **Stop**. Ending the share from the
+   browser's or the OS's own "Stop sharing" control also stops the recording.
+4. **Stop** adds the video to the message box. Add a comment if you like and send.
 
-```
-dist/com.example.my-plugin.tar.gz
-```
+### Permissions
+
+- **Desktop app:** the first time, Mattermost asks to allow *screen sharing* (when the picker
+  opens) and *media* (when recording starts). On **macOS** the system also asks once to
+  allow **Screen Recording** for Mattermost in *System Settings → Privacy & Security* — after
+  allowing it, quit and reopen Mattermost. The *media* prompt is shown on the main window;
+  if nothing seems to happen, look for it there (especially with several monitors).
+- **Browsers** show their own screen-sharing dialog every time, and ask once for the
+  microphone if narration is on.
+
+### Good to know
+
+- Recordings are capped at **1920×1080**: screen text stays readable and files stay small.
+  (Very large or high-DPI screens are captured at enormous sizes that the MP4 encoder
+  rejects; the plugin also falls back to WebM automatically if that ever happens.)
+- At ~2.5 Mbit/s, a 500 MB upload limit allows about **25 minutes**.
+- System sound (audio playing on the computer) is not recorded — only the microphone.
+- One screen or window per recording.
+
+## Privacy
+
+The recording is made and kept in your browser or desktop app until you press **Stop**; it is
+then uploaded like any other attachment you add to a message, and follows your server's normal
+file storage and retention rules. The plugin has no server component and sends nothing anywhere
+else.
 
 ## Development
 
-To avoid having to manually install your plugin, build and deploy your plugin using one of the following options. In order for the below options to work, you must first enable plugin uploads via your config.json or API and restart Mattermost.
+Requirements: Node (see `.nvmrc`), Go (see `go.mod`, used by the build tooling only), Docker for
+the end-to-end tests.
 
-```json
-    "PluginSettings" : {
-        ...
-        "EnableUploads" : true
-    }
-```
-
-### Development guidance
-
-1. Fewer packages is better: default to the main package unless there's good reason for a new package.
-
-2. Coupling implies same package: don't jump through hoops to break apart code that's naturally coupled.
-
-3. New package for a new interface: a classic example is the sqlstore with layers for monitoring performance, caching and mocking.
-
-4. New package for upstream integration: a discrete client package for interfacing with a 3rd party is often a great place to break out into a new package
-
-### Modifying the server boilerplate
-
-The server code comes with some boilerplate for creating an api, using slash commands, accessing the kvstore and using the cluster package for jobs.
-
-#### Api
-
-api.go implements the ServeHTTP hook which allows the plugin to implement the http.Handler interface. Requests destined for the `/plugins/{id}` path will be routed to the plugin. This file also contains a sample `HelloWorld` endpoint that is tested in plugin_test.go.
-
-#### Command package
-
-This package contains the boilerplate for adding a slash command and an instance of it is created in the `OnActivate` hook in plugin.go. If you don't need it you can delete the package and remove any reference to `commandClient` in plugin.go. The package also contains an example of how to create a mock for testing.
-
-#### KVStore package
-
-This is a central place for you to access the KVStore methods that are available in the `pluginapi.Client`. The package contains an interface for you to define your methods that will wrap the KVStore methods. An instance of the KVStore is created in the `OnActivate` hook.
-
-### Deploying with Local Mode
-
-If your Mattermost server is running locally, you can enable [local mode](https://docs.mattermost.com/administration/mmctl-cli-tool.html#local-mode) to streamline deploying your plugin. Edit your server configuration as follows:
-
-```json
-{
-    "ServiceSettings": {
-        ...
-        "EnableLocalMode": true,
-        "LocalModeSocketLocation": "/var/tmp/mattermost_local.socket"
-    },
-}
-```
-
-and then deploy your plugin:
-```
-make deploy
-```
-
-You may also customize the Unix socket path:
 ```bash
-export MM_LOCALSOCKETPATH=/var/tmp/alternate_local.socket
-make deploy
+cd webapp && npm ci
+npm run lint && npm run check-types && npm test   # unit tests
+cd .. && make dist                                # → dist/dev.patika.screen-recorder-<version>.tar.gz
 ```
 
-If developing a plugin with a webapp, watch for changes and deploy those automatically:
+End-to-end tests drive real Chrome against a throwaway Mattermost in Docker:
+
 ```bash
-export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_TOKEN=j44acwd8obn78cdcx7koid4jkr
-make watch
+cd e2e && npm ci && npx playwright install chrome chromium
+MM_VERSION=11.7.11 ./scripts/start-server.sh       # or 12.0.0, …
+npx playwright test
+npm run server:stop
 ```
 
-### Deploying with credentials
+The plugin is built to run unchanged on React 17, 18 and 19 (the server's own React is used at
+runtime): keep Babel on the classic JSX runtime and use only APIs available since React 16.8.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Alternatively, you can authenticate with the server's API with credentials:
-```bash
-export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_USERNAME=admin
-export MM_ADMIN_PASSWORD=password
-make deploy
-```
+Releases are cut by pushing a `v*` tag; CI builds the plugin and attaches it to a GitHub
+Release.
 
-or with a [personal access token](https://docs.mattermost.com/developer/personal-access-tokens.html):
-```bash
-export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_TOKEN=j44acwd8obn78cdcx7koid4jkr
-make deploy
-```
+## License
 
-### Releasing new versions
-
-The version of a plugin is determined at compile time, automatically populating a `version` field in the [plugin manifest](plugin.json):
-* If the current commit matches a tag, the version will match after stripping any leading `v`, e.g. `1.3.1`.
-* Otherwise, the version will combine the nearest tag with `git rev-parse --short HEAD`, e.g. `1.3.1+d06e53e1`.
-* If there is no version tag, an empty version will be combined with the short hash, e.g. `0.0.0+76081421`.
-
-To disable this behaviour, manually populate and maintain the `version` field.
-
-## How to Release
-
-To trigger a release, follow these steps:
-
-1. **For Patch Release:** Run the following command:
-    ```
-    make patch
-    ```
-   This will release a patch change.
-
-2. **For Minor Release:** Run the following command:
-    ```
-    make minor
-    ```
-   This will release a minor change.
-
-3. **For Major Release:** Run the following command:
-    ```
-    make major
-    ```
-   This will release a major change.
-
-4. **For Patch Release Candidate (RC):** Run the following command:
-    ```
-    make patch-rc
-    ```
-   This will release a patch release candidate.
-
-5. **For Minor Release Candidate (RC):** Run the following command:
-    ```
-    make minor-rc
-    ```
-   This will release a minor release candidate.
-
-6. **For Major Release Candidate (RC):** Run the following command:
-    ```
-    make major-rc
-    ```
-   This will release a major release candidate.
-
-## Q&A
-
-### How do I make a server-only or web app-only plugin?
-
-Simply delete the `server` or `webapp` folders and remove the corresponding sections from `plugin.json`. The build scripts will skip the missing portions automatically.
-
-### How do I include assets in the plugin bundle?
-
-Place them into the `assets` directory. To use an asset at runtime, build the path to your asset and open as a regular file:
-
-```go
-bundlePath, err := p.API.GetBundlePath()
-if err != nil {
-    return errors.Wrap(err, "failed to get bundle path")
-}
-
-profileImage, err := ioutil.ReadFile(filepath.Join(bundlePath, "assets", "profile_image.png"))
-if err != nil {
-    return errors.Wrap(err, "failed to read profile image")
-}
-
-if appErr := p.API.SetProfileImage(userID, profileImage); appErr != nil {
-    return errors.Wrap(err, "failed to set profile image")
-}
-```
-
-### How do I build the plugin with unminified JavaScript?
-Setting the `MM_DEBUG` environment variable will invoke the debug builds. The simplist way to do this is to simply include this variable in your calls to `make` (e.g. `make dist MM_DEBUG=1`).
+[Apache License 2.0](LICENSE). Built on the
+[Mattermost plugin starter template](https://github.com/mattermost/mattermost-plugin-starter-template)
+— see [NOTICE](NOTICE). Made by [Patika](https://patika.dev).
