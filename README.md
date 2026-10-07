@@ -90,7 +90,7 @@ else.
 
 ## Development
 
-Requirements: Node (see `.nvmrc`), Go (see `go.mod`, used by the build tooling only), Docker for
+Requirements: Node 24.21.0 (see `.node-version`), Go (see `go.mod`, used by the build tooling only), Docker for
 the end-to-end tests.
 
 ```bash
