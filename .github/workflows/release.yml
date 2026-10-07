@@ -25,6 +25,7 @@ jobs:
           go-version-file: go.mod
       - name: Test and build
         run: |
+          make apply
           cd webapp && npm ci && npm run lint && npm run check-types && npm run test-ci && cd ..
           make dist
       - name: Checksum

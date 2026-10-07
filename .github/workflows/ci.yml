@@ -26,6 +26,10 @@ jobs:
           go-version-file: go.mod
       - name: Install
         run: cd webapp && npm ci
+      - name: Generate manifest
+        # webapp/src/manifest.ts is generated from plugin.json (git-ignored); lint,
+        # type-check and tests import it, so create it before they run.
+        run: make apply
       - name: Lint
         run: cd webapp && npm run lint
       - name: Type-check
