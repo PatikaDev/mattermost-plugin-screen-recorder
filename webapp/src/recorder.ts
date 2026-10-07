@@ -6,7 +6,7 @@ import fixWebmDuration from 'fix-webm-duration';
 import {stopStream} from './capture';
 import {pickMimeType} from './media_format';
 
-export type AutoStopReason = 'size-limit' | 'sharing-ended';
+export type AutoStopReason = 'size-limit' | 'sharing-ended' | 'encoder-error';
 
 export type FinishedRecording = {
     blob: Blob;
@@ -21,10 +21,13 @@ const SIZE_LIMIT_HEADROOM = 0.95;
 const VIDEO_BITS_PER_SECOND = 2_500_000;
 
 export class Recording {
-    private readonly recorder: MediaRecorder;
+    private recorder: MediaRecorder;
+    private mimeType = 'video/webm';
+    private readonly combined: MediaStream;
+    private readonly hasAudio: boolean;
     private readonly chunks: Blob[] = [];
-    private readonly mimeType: string;
     private readonly stopped: Promise<void>;
+    private resolveStopped: () => void = () => undefined;
     private bytes = 0;
     private startedAt = 0;
     private autoStopped = false;
@@ -36,29 +39,13 @@ export class Recording {
         private readonly maxBytes: number,
         private readonly onAutoStop: (reason: AutoStopReason) => void,
     ) {
-        const tracks = [...screen.getVideoTracks(), ...(mic ? mic.getAudioTracks() : [])];
-        const combined = new MediaStream(tracks);
-        const mimeType = pickMimeType(Boolean(mic && mic.getAudioTracks().length));
-        this.recorder = new MediaRecorder(combined, {
-            ...(mimeType ? {mimeType} : {}),
-            videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
-        });
-        this.mimeType = this.recorder.mimeType || mimeType || 'video/webm';
-
+        const audioTracks = mic ? mic.getAudioTracks() : [];
+        this.hasAudio = audioTracks.length > 0;
+        this.combined = new MediaStream([...screen.getVideoTracks(), ...audioTracks]);
         this.stopped = new Promise((resolve) => {
-            this.recorder.onstop = () => resolve();
+            this.resolveStopped = resolve;
         });
-
-        this.recorder.ondataavailable = (event: BlobEvent) => {
-            if (!event.data || event.data.size === 0 || this.discarded) {
-                return;
-            }
-            this.chunks.push(event.data);
-            this.bytes += event.data.size;
-            if (this.maxBytes > 0 && this.bytes >= this.maxBytes * SIZE_LIMIT_HEADROOM) {
-                this.triggerAutoStop('size-limit');
-            }
-        };
+        this.recorder = this.createRecorder(pickMimeType(this.hasAudio));
 
         // The user can end the capture from the browser's or OS's own "Stop sharing" control.
         screen.getVideoTracks().forEach((track) => {
@@ -74,6 +61,10 @@ export class Recording {
 
     get recordedBytes(): number {
         return this.bytes;
+    }
+
+    get format(): string {
+        return this.mimeType;
     }
 
     setMicEnabled(enabled: boolean) {
@@ -110,6 +101,50 @@ export class Recording {
         }
         this.chunks.length = 0;
         this.releaseDevices();
+    }
+
+    private createRecorder(mimeType: string | null): MediaRecorder {
+        const recorder = new MediaRecorder(this.combined, {
+            ...(mimeType ? {mimeType} : {}),
+            videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
+        });
+        this.mimeType = recorder.mimeType || mimeType || 'video/webm';
+
+        recorder.ondataavailable = (event: BlobEvent) => {
+            if (recorder !== this.recorder || !event.data || event.data.size === 0 || this.discarded) {
+                return;
+            }
+            this.chunks.push(event.data);
+            this.bytes += event.data.size;
+            if (this.maxBytes > 0 && this.bytes >= this.maxBytes * SIZE_LIMIT_HEADROOM) {
+                this.triggerAutoStop('size-limit');
+            }
+        };
+        recorder.onerror = () => this.handleRecorderError(recorder);
+        recorder.onstop = () => {
+            if (recorder === this.recorder) {
+                this.resolveStopped();
+            }
+        };
+        return recorder;
+    }
+
+    // An encoder can accept a format in isTypeSupported() and still reject the actual
+    // stream — H.264 refuses frames above its maximum size. If that happens before any
+    // data was written, switch to WebM transparently; otherwise keep what we have.
+    private handleRecorderError(failed: MediaRecorder) {
+        if (failed !== this.recorder || this.discarded) {
+            return;
+        }
+        if (this.bytes === 0 && this.mimeType.startsWith('video/mp4')) {
+            const webm = pickMimeType(this.hasAudio, (type) => type.startsWith('video/webm') && MediaRecorder.isTypeSupported(type));
+            if (webm) {
+                this.recorder = this.createRecorder(webm);
+                this.recorder.start(1000);
+                return;
+            }
+        }
+        this.triggerAutoStop('encoder-error');
     }
 
     private triggerAutoStop(reason: AutoStopReason) {

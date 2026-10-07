@@ -47,12 +47,20 @@ export async function listDesktopSources(): Promise<DesktopSource[]> {
     return sources || [];
 }
 
+// High-DPI and 4K/5K screens capture at their backing size (a 5K monitor gives
+// 6400x3600), which is beyond what the H.264 (MP4) encoder accepts and wastes CPU
+// and upload size. 1080p keeps screen text readable and files small.
+export const MAX_WIDTH = 1920;
+export const MAX_HEIGHT = 1080;
+
 export function captureDesktopSource(sourceId: string): Promise<MediaStream> {
     // Chromium's legacy constraint syntax is the only way to capture a desktop source.
     const video = {
         mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: sourceId,
+            maxWidth: MAX_WIDTH,
+            maxHeight: MAX_HEIGHT,
             maxFrameRate: 30,
         },
     } as unknown as MediaTrackConstraints;
@@ -61,7 +69,7 @@ export function captureDesktopSource(sourceId: string): Promise<MediaStream> {
 
 export function captureBrowserScreen(): Promise<MediaStream> {
     const options: DisplayMediaStreamOptions & Record<string, unknown> = {
-        video: {frameRate: 30},
+        video: {width: {max: MAX_WIDTH}, height: {max: MAX_HEIGHT}, frameRate: 30},
         audio: false,
     };
     if (window.screenRecorderTestMode) {

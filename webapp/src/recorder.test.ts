@@ -99,4 +99,34 @@ describe('Recording', () => {
         await mp4.stop();
         expect(fixWebmDuration).toHaveBeenCalledTimes(1);
     });
+
+    it('falls back to WebM when the MP4 encoder rejects the stream before any data (5K screens)', async () => {
+        FakeMediaRecorder.supported = () => true;
+        const onAutoStop = jest.fn();
+        const recording = new Recording(screenStream(), micStream(), 0, onAutoStop);
+        recording.start();
+        expect(recording.format).toBe('video/mp4;codecs=avc1,mp4a.40.2');
+
+        FakeMediaRecorder.instances[0].fail();
+        expect(FakeMediaRecorder.instances).toHaveLength(2);
+        expect(FakeMediaRecorder.instances[1].state).toBe('recording');
+        expect(recording.format).toBe('video/webm;codecs=vp9,opus');
+        expect(onAutoStop).not.toHaveBeenCalled();
+
+        FakeMediaRecorder.instances[1].emit(300);
+        const result = await recording.stop();
+        expect(result.mimeType).toBe('video/webm;codecs=vp9,opus');
+        expect(result.blob.size).toBe(300 + 'duration'.length);
+    });
+
+    it('keeps what was recorded if the encoder fails mid-recording', () => {
+        const onAutoStop = jest.fn();
+        const recording = new Recording(screenStream(), null, 0, onAutoStop);
+        recording.start();
+        FakeMediaRecorder.instances[0].emit(500);
+
+        FakeMediaRecorder.instances[0].fail();
+        expect(FakeMediaRecorder.instances).toHaveLength(1);
+        expect(onAutoStop).toHaveBeenCalledWith('encoder-error');
+    });
 });

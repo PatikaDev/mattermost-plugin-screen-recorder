@@ -53,6 +53,7 @@ export class FakeMediaRecorder {
     timeslice = 0;
     ondataavailable: ((e: {data: Blob}) => void) | null = null;
     onstop: (() => void) | null = null;
+    onerror: ((e: unknown) => void) | null = null;
 
     constructor(public readonly stream: FakeStream, options: {mimeType?: string} = {}) {
         this.mimeType = options.mimeType || '';
@@ -65,6 +66,13 @@ export class FakeMediaRecorder {
     }
 
     stop() {
+        this.state = 'inactive';
+        this.onstop?.();
+    }
+
+    // Like a real encoder rejecting the stream: error, then the recorder stops itself.
+    fail(name = 'EncodingError') {
+        (this as any).onerror?.({error: {name}});
         this.state = 'inactive';
         this.onstop?.();
     }

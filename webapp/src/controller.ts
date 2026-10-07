@@ -217,6 +217,8 @@ class Controller {
         if (reason === 'size-limit') {
             const mb = Math.round(this.getMaxBytes() / (1024 * 1024));
             this.stop(`Recording stopped at the ${mb} MB upload limit.`);
+        } else if (reason === 'encoder-error') {
+            this.stop('Recording stopped unexpectedly (video encoder error). What was recorded so far was kept.');
         } else {
             this.stop();
         }
