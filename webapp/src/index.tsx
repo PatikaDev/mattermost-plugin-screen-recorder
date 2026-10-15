@@ -26,7 +26,20 @@ function RecordIcon() {
 }
 
 export default class Plugin {
+    // Mattermost can call initialize twice on the same instance when a plugin is enabled again
+    // while its code is still loading (e.g. during an upgrade); registering twice would show
+    // every icon and button twice until the page is reloaded.
+    private initialized = false;
+
+    public uninitialize() {
+        this.initialized = false;
+    }
+
     public async initialize(registry: PluginRegistry, store: Store<GlobalState>) {
+        if (this.initialized) {
+            return;
+        }
+        this.initialized = true;
         controller.configure({
 
             // The server's upload limit; the recorder stops before a video would exceed it.
